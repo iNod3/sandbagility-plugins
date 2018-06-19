@@ -163,7 +163,6 @@ class ProcessTracker():
             if FileObject is not None:
 
                 FileName = str(FileObject)
-                if not FileName.endswith('WNCRYT'):
 
                     if 'Write' in Action:
                         self.Dump(FileName, Detail.Buffer, Detail.Length)
