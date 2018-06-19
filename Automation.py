@@ -7,12 +7,14 @@ import random
 def GenString(length=8):
     return ''.join(random.sample(string.ascii_lowercase, length))
 
-def Upload(helper, filetype, process='explorer.exe', path='C:\\Users\\User\\Desktop\\'):
+def Upload(helper, filetype, process='explorer.exe', path='C:\\Users\\User\\Desktop\\', randomize=False):
 
     api = HyperApi(helper)
     api.AcquireContext(process)
 
-    filename = GenString()
+    if randomize: filename = GenString()
+    else: filename = os.path.basename(os.path.splitext(filetype.name)[0])
+
     extension = os.path.splitext(filetype.name)[-1]
     
     Data = filetype.raw.readall()
@@ -21,6 +23,7 @@ def Upload(helper, filetype, process='explorer.exe', path='C:\\Users\\User\\Desk
         filename, extension = os.path.splitext(filename)
         extension = '.exe'
     elif not extension: extension = '.exe'
+    elif extension == '.exe': pass
     else: raise Exception('UploadError: Extension not handled %s' % extension)
 
     filename = path + filename + extension
