@@ -51,6 +51,9 @@ class ProcessTracker():
                         CachedOperation.StartPending = False
                         return Operation.Detail
 
+            elif Operation.Detail in self.TargetProcess:
+                return Operation.Detail
+
         elif Operation.Process in self.TargetProcess:
             return Operation.Process
 
@@ -99,10 +102,9 @@ class ProcessTracker():
     def Update(self, Operation):
 
         Target = self.GetProcessFromOperation(Operation)
-        if not Target:
-            return None
+        if not Target: return None
 
-        if Target not in self.TargetProcess and Operation.Action != 'ExitProcess':
+        if Target.eprocess not in self.TargetProcess and Operation.Action != 'ExitProcess':
             self.TargetProcess.append(Target)
             self.EnableMonitor(Target)
         else:
