@@ -166,14 +166,14 @@ class ProcessTracker():
 
                 FileName = str(FileObject)
 
-                    if 'Write' in Action:
-                        self.Dump(FileName, Detail.Buffer, Detail.Length)
+                if 'Write' in Action:
+                    self.Dump(FileName, Detail.Buffer, Detail.Length)
 
-                    if 'LastAccess' not in self._cache['File']:
-                        self._cache['File']['LastAccess'] = None
+                if 'LastAccess' not in self._cache['File']:
+                    self._cache['File']['LastAccess'] = None
 
-                    if FileName != self._cache['File']['LastAccess']:
-                        self._cache['File']['LastAccess'] = FileName
+                if FileName != self._cache['File']['LastAccess']:
+                    self._cache['File']['LastAccess'] = FileName
 
         elif monitor == 'Service':
 
