@@ -7,17 +7,19 @@ import random
 def GenString(length=8):
     return ''.join(random.sample(string.ascii_lowercase, length))
 
-def Upload(helper, filetype, process='explorer.exe', path='C:\\Users\\User\\Desktop\\', randomize=False):
+def Upload(helper, file):
 
-    api = HyperApi(helper)
-    api.AcquireContext(process)
+    if file.startswith('http'): return UploadFromRemote(helper, file)
+    else: return UploadFromFile(helper, file)
+
+def UploadFromFile(helper, file, randomize=False):
 
     if randomize: filename = GenString()
-    else: filename = os.path.basename(os.path.splitext(filetype.name)[0])
+    else: filename = os.path.basename(os.path.splitext(file)[0])
 
-    extension = os.path.splitext(filetype.name)[-1]
+    extension = os.path.splitext(file)[-1]
     
-    Data = filetype.raw.readall()
+    Data = open(file, 'rb').read()
     if extension == '.zip':
         filename, Data = Unzip(Data)
         filename, extension = os.path.splitext(filename)
@@ -26,8 +28,31 @@ def Upload(helper, filetype, process='explorer.exe', path='C:\\Users\\User\\Desk
     elif extension == '.exe': pass
     else: raise Exception('UploadError: Extension not handled %s' % extension)
 
-    filename = path + filename + extension
+    filename = '%s.%s' % (filename, extension)
+    return __upload__(helper, filename, Data)
+
+def UploadFromRemote(helper, url):
+
+    import re
+    import requests
+
+    response = requests.get(url)
+    if response.status_code != 200: return False
+
+    try: Filename = '%s.exe' % re.findall('filename=(.*)', response.headers['Content-Disposition'])[0]
+    except: return False
+    
+    Data = requests.get(url).content
+
+    return __upload__(helper, Filename, Data)
+
+def __upload__(helper, Filename, Data, process='explorer.exe', path='C:\\Users\\User\\Desktop\\'):
+
+    filename = path + Filename
     helper.logger.info('Filename: %s', filename)
+
+    api = HyperApi(helper)
+    api.AcquireContext(process)
 
     hFile = api.CreateFile(bytes(filename.encode('utf8')))
     helper.logger.info('CreateFile: %x', hFile)
