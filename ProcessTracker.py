@@ -12,8 +12,7 @@ class ProcessTracker():
 
         self.helper = helper
 
-        self.TargetProcess = []
-        self.TargetProcess.append(Process)
+        self.TargetProcess = [Process]
         self.Output = Output + '\\' + self.timestamp()
         self.Monitors = Monitors
 
@@ -67,6 +66,7 @@ class ProcessTracker():
 
             Monitor = AvailableMonitor(self.helper, Process=Process)
             Monitor.RegisterPostCallback(self.__ProcessTrackerHandler__)
+            
             if Monitor.mode == 1:
                 self.DelayedMonitors.append(Monitor)
 
@@ -74,8 +74,10 @@ class ProcessTracker():
 
         if Operation.Action == 'LoadImage':
             for delayed_monitor in self.DelayedMonitors.copy():
-                delayed_monitor.NotifyLoadImage(
-                    Operation.Process, Operation.Detail)
+
+                if True not in [ d in Operation.Detail.FullImageName for d in delayed_monitor.Dependencies ]: continue
+                delayed_monitor.NotifyLoadImage(Operation.Process, Operation.Detail)
+
                 if delayed_monitor.Installed:
                     self.DelayedMonitors.remove(delayed_monitor)
 
@@ -83,6 +85,10 @@ class ProcessTracker():
             if Target in self.TargetProcess:
                 self.TargetProcess.remove(Target)
                 self.helper.UnsetBreakpointByCr3(Target.DirectoryTableBase)
+            
+                for delayed_monitor in self.DelayedMonitors.copy():
+                    if delayed_monitor.Process == Target:
+                        self.DelayedMonitors.remove(delayed_monitor)
 
         elif Operation.Action == 'CloseServiceHandle':
             if hasattr(Operation.Detail, 'hSCObject') and Operation.Detail.hSCObject in self._cache['Service']:
@@ -104,7 +110,7 @@ class ProcessTracker():
         Target = self.GetProcessFromOperation(Operation)
         if not Target: return None
 
-        if Target.eprocess not in self.TargetProcess and Operation.Action != 'ExitProcess':
+        if Target not in self.TargetProcess and Operation.Action != 'ExitProcess':
             self.TargetProcess.append(Target)
             self.EnableMonitor(Target)
         else:
