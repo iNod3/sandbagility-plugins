@@ -70,6 +70,30 @@ def __upload__(helper, Filename, Data, process='explorer.exe', path='C:\\Users\\
 
     return True
 
+def __download__(helper, files, output, process='explorer.exe'):
+
+    api = HyperApi(helper)
+    api.AcquireContext(process)
+
+    for file in files:
+
+        hFile = api.CreateFile(bytes(file.encode('utf8')), DesiredAccess=0x80000000, CreationDisposition=3)
+        helper.logger.info('CreateFile: %x', hFile)
+
+        if hFile == 0xffffffffffffffff: break
+
+        Data = api.ReadFile(hFile)
+        helper.logger.info('ReadFile: %x', len(Data))
+
+        Status = api.CloseHandle(hFile)
+        helper.logger.info('CloseHandle: %x', Status)
+
+        basename = os.path.split(file)[-1]
+        with open('%s%s_' % (output, basename), 'wb') as f:
+            f.write(Data)
+
+    api.ReleaseContext()
+
 def Unzip(data):
 
     passwords = ['infected', '666', 'virus']
