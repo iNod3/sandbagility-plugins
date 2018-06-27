@@ -215,6 +215,16 @@ class ProcessTracker():
                 if 'DynamicCode' not in self._cache: self._cache['DynamicCode'] = []
                 self._cache['DynamicCode'].append(monitor.LastOperation.Copy())
 
+        elif monitor == 'Crypto':
+
+            if Action == 'CryptEncrypt':
+
+                import zlib
+
+                FileName = '{}_{}_{}_{}.bin'.format(
+                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (zlib.crc32(Detail.DecryptedBuffer)% 2**32))
+                self.Dump(FileName, Data=Detail.DecryptedBuffer)
+
         monitor.PrintInfoLog()
 
         return True
