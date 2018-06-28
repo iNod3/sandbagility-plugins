@@ -27,8 +27,8 @@ class HyperApi(ABC):
     def ReleaseContext(self):
 
         self.ImpersonateProcess = None
-        self.helper.UnsetAllBreakpoints()
-        self.helper.Run()
+        #self.helper.UnsetAllBreakpoints()
+        #self.helper.Run()
 
     @abstractmethod
     def SaveState(self):
