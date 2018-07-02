@@ -26,9 +26,9 @@ def UploadFromFile(helper, file, randomize=False):
         extension = '.exe'
     elif not extension: extension = '.exe'
     elif extension == '.exe': pass
-    else: raise Exception('UploadError: Extension not handled %s' % extension)
+    else: pass
 
-    filename = '%s.%s' % (filename, extension)
+    filename = '%s%s' % (filename, extension)
     return __upload__(helper, filename, Data)
 
 def UploadFromRemote(helper, url):
