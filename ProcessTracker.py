@@ -11,14 +11,17 @@ class ProcessTracker():
     def __init__(self, helper, Process, Output='', Monitors=[]):
 
         self.helper = helper
-
-        self.TargetProcess = [Process]
-        self.Output = Output + '\\' + self.timestamp()
         self.Monitors = Monitors
+        self.Output = Output + '\\' + self.timestamp()
+        
+        self.DelayedMonitors = []
 
         self.__initialize_cache__()
 
-        self.DelayedMonitors = []
+        if hasattr(Process, 'eprocess'):
+            self.EnableMonitor(Process)
+
+        self.TargetProcess = [Process]
 
         Monitor = PsCreateProcessMonitor(self.helper)
         Monitor.RegisterPostCallback(self.__ProcessTrackerHandler__)
@@ -40,7 +43,11 @@ class ProcessTracker():
 
         if Operation.Action in ['CreateProcess', 'ExitProcess']:
 
-            if Operation.Process in self.TargetProcess:
+            if Operation.Process in self.TargetProcess or Operation.Detail in self.TargetProcess:
+
+                if Operation.Action == 'CreateProcess':
+                    self.TargetProcess.append(Operation.Detail)
+                    self.EnableMonitor(Operation.Detail)
                 return Operation.Detail
 
             elif Operation.Process == 'services.exe':
@@ -75,14 +82,14 @@ class ProcessTracker():
         if Operation.Action == 'LoadImage':
             for delayed_monitor in self.DelayedMonitors.copy():
 
-                if True not in [ d in Operation.Detail.FullImageName for d in delayed_monitor.Dependencies ]: continue
+                if True not in [ d in Operation.Detail.FullImageName.lower() for d in delayed_monitor.Dependencies ]: continue
                 delayed_monitor.NotifyLoadImage(Operation.Process, Operation.Detail)
 
                 if delayed_monitor.Installed:
                     self.DelayedMonitors.remove(delayed_monitor)
 
         elif Operation.Action == 'ExitProcess':
-            if Target in self.TargetProcess:
+            if Target in self.TargetProcess and len(self.TargetProcess) > 15:
                 self.TargetProcess.remove(Target)
                 self.helper.UnsetBreakpointByCr3(Target.DirectoryTableBase)
             
