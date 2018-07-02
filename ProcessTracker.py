@@ -232,6 +232,19 @@ class ProcessTracker():
                     Process.ImageFileName, str(Process.Cid), Action, '%x' % (zlib.crc32(Detail.DecryptedBuffer)% 2**32))
                 self.Dump(FileName, Data=Detail.DecryptedBuffer)
 
-        monitor.PrintInfoLog()
+        if not monitor.LastOperation.isEmpty:
+
+            Rip = self.helper.dbg.rip
+
+            if Rip & 0xfff0000000000000:
+                if hasattr(monitor.ActiveProcess, 'Thread') and hasattr(monitor.ActiveProcess.Thread, 'TrapFrame'):
+                    Rip = monitor.ActiveProcess.Thread.TrapFrame.Rip
+
+            monitor.logger.info(
+                '{:<30}: Process: {:<20}, Cid: {:>10}, Rip: {}, {}'.format(
+                    monitor.LastOperation.Action, monitor.LastOperation.Process.ImageFileName, str(
+                        monitor.LastOperation.Process.Cid), hex(Rip), repr(monitor.LastOperation.Detail)
+                )
+            )
 
         return True
