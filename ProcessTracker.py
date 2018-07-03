@@ -8,11 +8,12 @@ class ProcessTracker():
 
     _LOGGER = 'ProcessTracker'
 
-    def __init__(self, helper, Process, Output='', Monitors=[]):
+    def __init__(self, helper, Process, Output='', Monitors=[], BreakOnActions=[]):
 
         self.helper = helper
         self.Monitors = Monitors
         self.Output = Output + '\\' + self.timestamp()
+        self.BreakOnActions = BreakOnActions
         
         self.DelayedMonitors = []
 
@@ -246,5 +247,8 @@ class ProcessTracker():
                         monitor.LastOperation.Process.Cid), hex(Rip), repr(monitor.LastOperation.Detail)
                 )
             )
+
+        if self.BreakOnActions and Action in self.BreakOnActions:
+            return False
 
         return True
