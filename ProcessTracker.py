@@ -12,7 +12,7 @@ class ProcessTracker():
 
         self.helper = helper
         self.Monitors = Monitors
-        self.Output = Output + '\\' + self.timestamp()
+        self.Output = Output
         self.BreakOnActions = BreakOnActions
         
         self.DelayedMonitors = []
@@ -29,10 +29,6 @@ class ProcessTracker():
 
         Monitor = PsLoadImageMonitor(self.helper)
         Monitor.RegisterPostCallback(self.__ProcessTrackerHandler__)
-
-    def timestamp(self):
-        import time
-        return time.strftime('%Y%m%d%H%S', time.localtime())
 
     def __initialize_cache__(self):
 
