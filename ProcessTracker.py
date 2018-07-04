@@ -229,6 +229,29 @@ class ProcessTracker():
                     Process.ImageFileName, str(Process.Cid), Action, '%x' % (zlib.crc32(Detail.DecryptedBuffer)% 2**32))
                 self.Dump(FileName, Data=Detail.DecryptedBuffer)
 
+            elif Action == 'CryptDecrypt':
+
+                FileName = '{}_{}_{}_{}.bin'.format(
+                    Process.ImageFileName, str(Process.Cid), Action, '%x' % Detail.pbData)
+                self.Dump(FileName, buffer=Detail.pbData, length=Detail.dwDataLen)
+
+            elif Action in ['CryptImportKey', 'CryptExportKey']:
+
+                FileName = '{}_{}_{}_{}.bin'.format(
+                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (Detail.pbData))
+                
+                if hasattr(Detail, 'dwDataLen'): 
+                    self.Dump(FileName, buffer=Detail.pbData, length=Detail.dwDataLen)
+
+        elif monitor == 'Internet':
+
+            if Action == 'InternetReadFile':
+
+                FileName = '{}_{}_{}_{}.bin'.format(
+                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (Detail.lpBuffer))
+                dwNumberOfBytesRead = self.helper.ReadVirtualMemory32(Detail.lpdwNumberOfBytesRead)
+                self.Dump(FileName, buffer=Detail.lpBuffer, length=dwNumberOfBytesRead)
+
         if not monitor.LastOperation.isEmpty:
 
             Rip = self.helper.dbg.rip
