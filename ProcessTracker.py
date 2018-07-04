@@ -134,7 +134,7 @@ class ProcessTracker():
             pass
 
         if Data is None:
-            if buffer is None or length is None:
+            if not buffer or not length:
                 return
             Data = self.helper.ReadVirtualMemory(buffer, length, Lazy=True)
             if Data is None:
