@@ -19,7 +19,7 @@ class HyperApi(ABC):
 
         if isinstance(Process, str) or isinstance(Process, int):
             self.helper.SwapContext(Process, Userland=True)
-            Process = self.helper.PsGetCurrentProcess(loadLdr=True)
+            Process = self.helper.PsGetCurrentProcess(Detail=True)
 
         self.ImpersonateProcess = Process
         self.logger.debug('ImpersonateProcess: %s', self.ImpersonateProcess)
