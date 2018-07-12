@@ -35,6 +35,7 @@ class ProcessTracker():
         self._cache = {}
         self._cache['Service'] = {}
         self._cache['File'] = {}
+        self._cache['DynamicCode'] = []
 
     def GetProcessFromOperation(self, Operation):
 
@@ -100,12 +101,10 @@ class ProcessTracker():
 
         elif 'DynamicCode' in self._cache and self._cache['DynamicCode']:
             
-            for DynamicCode in self._cache['DynamicCode']:
-                self.Dump(
-                    '%s-%s-%x-%x.bin' % (DynamicCode.Process.ImageFileName, str(DynamicCode.Process.Cid), DynamicCode.Detail.BaseAddress, DynamicCode.Detail.RegionSize),
-                    DynamicCode.Detail.BaseAddress,
-                    DynamicCode.Detail.RegionSize )
-                self._cache['DynamicCode'].remove(DynamicCode)
+            for DynamicCodeOperation in self._cache['DynamicCode']:
+
+                self.Dump( DynamicCodeOperation, DynamicCodeOperation.Detail.BaseAddress, DynamicCodeOperation.Detail.RegionSize)
+                self._cache['DynamicCode'].remove(DynamicCodeOperation)
 
         return True
 
@@ -122,33 +121,41 @@ class ProcessTracker():
 
         return Target
 
-    def Dump(self, path, buffer=None, length=None, Data=None):
+    def Dump(self, Operation=None, Buffer=None, Length=None, Data=None, Caption='', Path='', Lazy=True):
 
-        path = os.path.splitdrive(path)[-1]
-        path, filename = os.path.split(path)
-        path = os.path.normpath(os.sep.join([self.Output, path]))
-
-        try:
-            os.makedirs(path)
-        except:
-            pass
+        import zlib
 
         if Data is None:
-            if not buffer or not length:
-                return
-            Data = self.helper.ReadVirtualMemory(buffer, length, Lazy=True)
+            if not Buffer or not Length:
+                return False
+            Data = self.helper.ReadVirtualMemory(Buffer, Length, Lazy=Lazy)
             if Data is None:
-                return
+                return False
+            Label = '%x' % Buffer
+        elif isinstance(Data, bytes):
+            Label = '%x' % (zlib.crc32(Data)% 2**32)
+        else: Label = 'Unknown'
 
-        fullname = os.path.join(path, filename) + '_'
+        if not Path and not Operation: return False
+        elif not Path and Operation: 
+            Path = '{}_{}_{}_{}'.format(Operation.Process.ImageFileName, str(Operation.Process.Cid).strip(), Operation.Action, Label)
+            if Caption: Path += '_%s' % Caption
+            Path += '.bin'
+
+        Path = os.path.splitdrive(Path)[-1]
+        Path, filename = os.path.split(Path)
+        Path = os.path.normpath(os.sep.join([self.Output, Path]))
+
+        try: os.makedirs(Path)
+        except: pass
+
+        fullname = os.path.join(Path, filename) + '_'
 
         """ TODO Create an InMemory Zip file """
-        try:
-            open(fullname, 'ab').write(Data)
-        except:
-            pass
+        try: open(fullname, 'ab').write(Data)
+        except: pass
 
-        return
+        return True
 
     def __ProcessTrackerHandler__(self, monitor):
 
@@ -177,7 +184,7 @@ class ProcessTracker():
                 FileName = str(FileObject)
 
                 if 'Write' in Action:
-                    self.Dump(FileName, Detail.Buffer, Detail.Length)
+                    self.Dump(monitor.LastOperation, Path=FileName, Buffer=Detail.Buffer, Length=Detail.Length)
 
                 if 'LastAccess' not in self._cache['File']:
                     self._cache['File']['LastAccess'] = None
@@ -207,16 +214,12 @@ class ProcessTracker():
 
             if Action == 'AcquireResource':
 
-                FileName = '{}_{}_{}.rc'.format(
-                    Process.ImageFileName, str(Process.Cid), Detail.lpName)
-                self.Dump(FileName, Data=Detail.Data)
-                monitor.LastOperation.Detail.Data = FileName
+                self.Dump(monitor.LastOperation, Data=Detail.Data, Caption=Detail.lpName)
+                delattr(monitor.LastOperation.Detail, 'Data')
 
         elif monitor == 'DynamicCode':
 
             if Action == 'DynamicCode':
-
-                if 'DynamicCode' not in self._cache: self._cache['DynamicCode'] = []
                 self._cache['DynamicCode'].append(monitor.LastOperation.Copy())
 
         elif monitor == 'Crypto':
@@ -225,49 +228,28 @@ class ProcessTracker():
 
                 import zlib
 
-                FileName = '{}_{}_{}_{}.bin'.format(
-                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (zlib.crc32(Detail.DecryptedBuffer)% 2**32))
-                self.Dump(FileName, Data=Detail.DecryptedBuffer)
+                self.Dump(monitor.LastOperation, Data=Detail.DecryptedBuffer)
+                delattr(monitor.LastOperation.Detail, 'DecryptedBuffer')
 
             elif Action == 'CryptDecrypt':
-
-                FileName = '{}_{}_{}_{}.bin'.format(
-                    Process.ImageFileName, str(Process.Cid), Action, '%x' % Detail.pbData)
-                self.Dump(FileName, buffer=Detail.pbData, length=Detail.dwDataLen)
+                self.Dump(monitor.LastOperation, Buffer=Detail.pbData, Length=Detail.dwDataLen)
 
             elif Action in ['CryptImportKey', 'CryptExportKey']:
 
-                FileName = '{}_{}_{}_{}.bin'.format(
-                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (Detail.pbData))
                 
-                if hasattr(Detail, 'dwDataLen'): 
-                    self.Dump(FileName, buffer=Detail.pbData, length=Detail.dwDataLen)
+                if hasattr(Detail, 'dwDataLen'):
+                    self.Dump(monitor.LastOperation, Buffer=Detail.pbData, Length=Detail.dwDataLen)
 
         elif monitor == 'Internet':
 
             if Action == 'InternetReadFile':
 
-                FileName = '{}_{}_{}_{}.bin'.format(
-                    Process.ImageFileName, str(Process.Cid), Action, '%x' % (Detail.lpBuffer))
                 dwNumberOfBytesRead = self.helper.ReadVirtualMemory32(Detail.lpdwNumberOfBytesRead)
-                self.Dump(FileName, buffer=Detail.lpBuffer, length=dwNumberOfBytesRead)
+                self.Dump(monitor.LastOperation, Buffer=Detail.lpBuffer, Length=dwNumberOfBytesRead)
 
-        if not monitor.LastOperation.isEmpty:
-
-            Rip = self.helper.dbg.rip
-
-            if Rip & 0xfff0000000000000:
-                if hasattr(monitor.ActiveProcess, 'Thread') and hasattr(monitor.ActiveProcess.Thread, 'TrapFrame'):
-                    Rip = monitor.ActiveProcess.Thread.TrapFrame.Rip
-
-            monitor.logger.info(
-                '{:<30}: Process: {:<20}, Cid: {:>10}, Rip: {}, {}'.format(
-                    monitor.LastOperation.Action, monitor.LastOperation.Process.ImageFileName, str(
-                        monitor.LastOperation.Process.Cid), hex(Rip), repr(monitor.LastOperation.Detail)
-                )
-            )
+        if not monitor.LastOperation.isEmpty: monitor.PrintInfoLog()
 
         if self.BreakOnActions and Action in self.BreakOnActions:
-            return False
+            exit(0)
 
         return True
