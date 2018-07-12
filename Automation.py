@@ -106,6 +106,20 @@ def __download__(helper, files, output, process='explorer.exe'):
 
     api.ReleaseContext()
 
+def execute(helper, path, process='explorer.exe'):
+
+    api = HyperApi(helper)
+    api.AcquireContext(process)
+
+    hFile = api.WinExec(bytes(path))
+    helper.logger.info('WinExec: %x', hFile)
+    if hFile == 0xffffffffffffffff:
+        return False
+
+    api.ReleaseContext()
+
+    return True
+
 def Unzip(data):
 
     passwords = ['infected', '666', 'virus']
